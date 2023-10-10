@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import copy
-from scipy import optimize
+from scipy.optimize import minimize
 from matplotlib.animation import FuncAnimation
 
 # Class defining a vector in spherical coordinates
@@ -11,6 +11,7 @@ class Vector3d:
         self.phi=phi_angle_deg
         self.theta=theta_angle_deg
         self.r=r_magnitude
+        self.phi_rad=self.phi*np.pi/180
     def plot_vector(self,ax,color='k'):
         ax.quiver(0,0,np.cos(self.phi*np.pi/180),np.sin(self.phi*np.pi/180), color=color, scale=1)
         ax.set_rmin(0)
@@ -28,10 +29,6 @@ class Moment:
     def __init__(self, name, initial_vector: Vector3d):
         self.name=name
         self.vector=initial_vector
-    def define_hamiltonian(self, hamiltonian):
-        self.hamiltonian=hamiltonian
-    def calculate_energy(self):
-        self.hamiltonian.calculate_energy(self)
         
     def calculate_energy(self, exchange_moment: Vector3d):
         E=0
@@ -46,7 +43,7 @@ class Moment:
         return E
     
     def __repr__(self):
-        return 'moment {} vector: {}\n{}'.format(self.name, self.vector,self.hamiltonian)
+        return 'moment {} vector: {}\n'.format(self.name, self.vector)
 
 # Classes for various terms in the Hamiltonian
 class Anisotropy:
@@ -85,47 +82,47 @@ class Hamiltonian:
             rep_string+=term.__repr__()+'\n'
         return rep_string
 
-def perturb_moments(moment_list,T):
-    return_list=[]
-    for i in range(len(moment_list)):
-        moment=moment_list[i]
-
-        initial_vector = moment.vector
-        new_vector = Vector3d((initial_vector.phi+np.random.randint(0,359))%360,90,1)
-        new_moment=copy.deepcopy(moment)
-        new_moment.vector=new_vector
-
-        E_difference=new_moment.calculate_energy(moment_list[(i+1)%(len(moment_list))].vector)-moment.calculate_energy(moment_list[(i+1)%(len(moment_list))].vector)
-        #if the cost is negative, flip it, if positive, flip it with some probability
-        if E_difference < 0:
-            moment=new_moment
-        elif np.random.uniform() < np.exp(-E_difference/T):
-            moment=new_moment
-        return_list.append(moment)
-    return return_list
+def minimize_energy(moment_list, hamiltonian: Hamiltonian):
+    def energy_function(x):
+        E1=0
+        E2=0
+        for term in hamiltonian.terms:
+            #for now only calculate relative phi angle
+            if isinstance(term, Exchange):
+                E1+=term.magnitude*np.cos(x[0]-x[1])
+                E2+=term.magnitude*np.cos(x[1]-x[0])
+            if isinstance(term, Anisotropy):
+                E1+=term.vector.r*np.cos(2*(term.vector.phi_rad-x[0]))
+                E2+=term.vector.r*np.cos(2*(term.vector.phi_rad-x[1]))
+            if isinstance(term, Zeeman):
+                E1+=-term.vector.r*np.cos(term.vector.phi_rad-x[0])
+                E2+=-term.vector.r*np.cos(term.vector.phi_rad-x[1])
+        # print(E1)
+        # print(E2)
+        return E1+E2
+    
+    bnds=((-np.pi*2,np.pi*2),(-np.pi*2,np.pi*2))
+    phi_opt=minimize(energy_function,[moment_list[0].vector.phi_rad,moment_list[1].vector.phi_rad],
+                     bounds=bnds, method='Nelder-Mead')
+    moment_list[0].vector.phi_rad=phi_opt['x'][0]
+    moment_list[0].vector.phi=phi_opt['x'][0]*180/np.pi
+    moment_list[1].vector.phi_rad=phi_opt['x'][1]
+    moment_list[1].vector.phi=phi_opt['x'][1]*180/np.pi
+    return moment_list
 
 def calculate_angular_dependence(angles):
     m1ang=[]
     m2ang=[]
     for angle in angles:   
         m1=Moment('m1',Vector3d(90,90,1))
-        m2=Moment('m2',Vector3d(0,90,1))
-        Hext=Vector3d(angle,90,10)
-        m1H=Hamiltonian()
-        m1H.add_anisotropy(Anisotropy('biaxial_anisotropy1',Vector3d(45,90,10)))
-        m1H.add_anisotropy(Anisotropy('biaxial_anisotropy2',Vector3d(135,90,10)))
-        m1H.add_anisotropy(Zeeman('external_field',Hext))
-        m1H.add_anisotropy(Exchange('m2',100))
-        m1.define_hamiltonian(m1H)
-        m2H=Hamiltonian()
-        m2H.add_anisotropy(Anisotropy('biaxial anisotropy1',Vector3d(45,90,10)))
-        m2H.add_anisotropy(Anisotropy('biaxial anisotropy2',Vector3d(135,90,10)))
-        m2H.add_anisotropy(Zeeman('external_field',Hext))
-        m2H.add_anisotropy(Exchange('m1',100))
-        m2.define_hamiltonian(m2H)
-        N=1000
-        for i in range(0,N):
-            [m1,m2]=perturb_moments([m1,m2],1e-6)
+        m2=Moment('m2',Vector3d(-90,90,1))
+        Hext=Vector3d(angle,90,5)
+        h=Hamiltonian()
+        h.add_anisotropy(Anisotropy('biaxial_anisotropy1',Vector3d(45,90,10e-1)))
+        h.add_anisotropy(Anisotropy('biaxial_anisotropy2',Vector3d(135,90,10e-1)))
+        h.add_anisotropy(Zeeman('external_field',Hext))
+        h.add_anisotropy(Exchange('ex',100))
+        minimize_energy([m1,m2],h)
         m1ang.append(m1.vector.phi)
         m2ang.append(m2.vector.phi)
 
@@ -137,7 +134,7 @@ def calculate_angular_dependence(angles):
     line2,=ax.plot([0,m2ang[0]*np.pi/180],[0,1],'k')
 
     def frame(i):
-        print(i)
+        print(angles[i])
         line.set_data([0,angles[i]*np.pi/180],[0,1])
         line1.set_data([0,m1ang[i]*np.pi/180],[0,1])
         line2.set_data([0,m2ang[i]*np.pi/180],[0,1])
@@ -146,7 +143,17 @@ def calculate_angular_dependence(angles):
 
     ax.set_rmax(1.5)
     ax.set_yticklabels([])
-    animation = FuncAnimation(fig, func=frame, frames=range(len(angles)), interval=100)
+    animation = FuncAnimation(fig, func=frame, frames=range(len(angles)), interval=10)
     plt.show()
 
-calculate_angular_dependence(range(0,360,10))
+calculate_angular_dependence(range(0,360,2))
+
+# m1=Moment('m1',Vector3d(90,90,1))
+# m2=Moment('m2',Vector3d(0,90,1))
+# Hext=Vector3d(0,90,10)
+# h=Hamiltonian()
+# h.add_anisotropy(Anisotropy('biaxial_anisotropy1',Vector3d(45,90,10)))
+# h.add_anisotropy(Anisotropy('biaxial_anisotropy2',Vector3d(135,90,10)))
+# h.add_anisotropy(Zeeman('external_field',Hext))
+# h.add_anisotropy(Exchange('ex',100))
+# minimize_energy([m1,m2],h)
