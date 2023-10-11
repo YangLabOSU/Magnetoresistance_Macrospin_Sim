@@ -1,0 +1,33 @@
+Detailed analysis for Pt/NiO:
+https://doi.org/10.1103/PhysRevB.98.024422
+
+-------------------------------------------------------------------------------------------
+
+Spin Magnetoresistance (Pt/magnetic insulator interface):
+Rxx and Rxy cos and sin(2alpha) respectively, should saturate with magnetic sublattices
+https://doi.org/10.1103/PhysRevB.97.014417
+
+Ordinary Hall Effect:
+Rxy when B has an out of plane component (cos(beta))
+
+Hanle Magnetoresistance (Pt):
+Rxx and Rxy ferrromagnetic SMR like, quadratic with field, mostly temperature independent
+http://dx.doi.org/10.1103/PhysRevLett.116.016603
+
+Ordinary Magnetorestance (Pt):
+Conduction electrons are displaced from their trajectories by Lorentz force (relevant for high H)
+gives SMR-like contribution to Rxx and Rxy (not sure about the sign, apparently AFM-like)
+goes like (H/rho)^(~1.8) -> Kohler's rule
+so more relevant for low resistivity
+temperature independent
+good way to check is to do gamma scan, where we don't expect OHE or SMR in Rxx
+http://dx.doi.org/10.1103/PhysRevApplied.6.034007
+
+Proximity Effect induced Anisotropic Magnetoresistance (Pt):
+SMR - like contribution, which should be more relevant for thinner Pt at lower temperatures
+
+Paramagnetic SMR:
+above TN an SMR signal can be observed which increases with increasing field
+this should be a FM-like SMR signal
+It should also go like 1/T (distinguishable from HMR)
+https://doi.org/10.1103/PhysRevB.104.134428
