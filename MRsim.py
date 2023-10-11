@@ -131,8 +131,7 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
         h.add_anisotropy(Exchange('ex',100))
         minimize_energy([m1,m2],h,angle_guess=angle)
         m1ang.append(m1.vector.phi)
-        m2ang.append(m2.vector.phi)
-
+        m2ang.append(m2.vector.phi) 
     m1ang=np.asarray(m1ang)
     m2ang=np.asarray(m2ang)
     Neel_direction_rad=np.pi/180*(m1ang+m2ang)/2+np.pi/2
