@@ -126,9 +126,9 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
         h=Hamiltonian()
         # h.add_anisotropy(Anisotropy('uniaxial_anisotropy',1,Vector3d(0,90,3e-2)))
         # h.add_anisotropy(Anisotropy('biaxial_anisotropy',2,Vector3d(45,90,.02)))
-        h.add_anisotropy(Anisotropy('triaxial_anisotropy',3,Vector3d(60,90,5e-3)))
+        h.add_anisotropy(Anisotropy('triaxial_anisotropy',3,Vector3d(60,90,6e-5)))
         h.add_anisotropy(Zeeman('external_field',Hext))
-        h.add_anisotropy(Exchange('ex',100))
+        h.add_anisotropy(Exchange('ex',1000))
         minimize_energy([m1,m2],h,angle_guess=angle)
         m1ang.append(m1.vector.phi)
         m2ang.append(m2.vector.phi) 
@@ -164,6 +164,7 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
     line,=ax.plot([0,angles[0]*np.pi/180],[0,1],'b')
     line1,=ax.plot([0,m1ang[0]*np.pi/180],[0,1],'k')
     line2,=ax.plot([0,m2ang[0]*np.pi/180],[0,1],'k')
+    line3,=ax.plot([0,I_direction*np.pi/180],[0,1],'y')
 
     def frame(i):
         # print(angles[i])
@@ -180,7 +181,7 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
     animation = FuncAnimation(fig, func=frame, frames=range(len(angles)), interval=10)
     plt.show()
 
-calculate_angular_dependence(I_direction=45,H_magnitude=10)
+calculate_angular_dependence(I_direction=0,H_magnitude=2)
 
 # m1=Moment('m1',Vector3d(90,90,1))
 # m2=Moment('m2',Vector3d(0,90,1))
