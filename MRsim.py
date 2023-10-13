@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import copy
 from scipy.optimize import minimize
-from matplotlib.animation import FuncAnimation
+import matplotlib.animation as mplanim
 
 # Class defining a vector in spherical coordinates
 class Vector3d:
@@ -57,15 +57,15 @@ class DMI:
         return 'DMI: {}, {}'.format(self.name,self.magnitude)
 
 # Class defining the free_energy for a macrospin moment
-class free_energy:
+class Free_energy:
     def __init__(self):
         self.terms=[]
     def add_anisotropy(self, anisotropy: Anisotropy):
         self.terms.append(anisotropy)
     def add_Zeeman(self, zeeman: Zeeman):
-        self.terms.append(Zeeman)
+        self.terms.append(zeeman)
     def add_exchange(self, exchange: Exchange):
-        self.terms.append(Exchange)
+        self.terms.append(exchange)
     def add_DMI(self, dmi: DMI):
         self.terms.append(dmi)
 
@@ -75,7 +75,7 @@ class free_energy:
             rep_string+=term.__repr__()+'\n'
         return rep_string
 
-def minimize_energy(moment_list, free_energy: free_energy, angle_guess=0):
+def minimize_energy(moment_list, free_energy: Free_energy, angle_guess=0):
     def energy_function(x):
         E1=0
         E2=0
@@ -118,14 +118,14 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
         m1=Moment('m1',Vector3d(90,90,1))
         m2=Moment('m2',Vector3d(-90,90,1))
         Hext=Vector3d(angle,90,H_magnitude)
-        h=free_energy()
-        # h.add_anisotropy(Anisotropy('uniaxial_anisotropy',1,Vector3d(0,90,3e-2)))
-        # h.add_anisotropy(Anisotropy('biaxial_anisotropy',2,Vector3d(45,90,.02)))
-        h.add_anisotropy(Anisotropy('triaxial_anisotropy',3,Vector3d(60,90,1.6e-6)))
-        h.add_anisotropy(Zeeman('external_field',Hext))
-        h.add_anisotropy(Exchange('ex',1000))
-        h.add_anisotropy(DMI('dmi',2.2))
-        minimize_energy([m1,m2],h,angle_guess=angle)
+        f=Free_energy()
+        # f.add_anisotropy(Anisotropy('uniaxial_anisotropy',1,Vector3d(0,90,1e-4)))
+        f.add_anisotropy(Anisotropy('biaxial_anisotropy',2,Vector3d(45,90,1e-4)))
+        # f.add_anisotropy(Anisotropy('triaxial_anisotropy',3,Vector3d(60,90,1.6e-6)))
+        f.add_anisotropy(Zeeman('external_field',Hext))
+        f.add_anisotropy(Exchange('ex',1000))
+        # f.add_anisotropy(DMI('dmi',2.2))
+        minimize_energy([m1,m2],f,angle_guess=angle)
         m1ang.append(m1.vector.phi)
         m2ang.append(m2.vector.phi) 
     m1ang=np.asarray(m1ang)
@@ -176,10 +176,14 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
 
     ax.set_rmax(1.5)
     ax.set_yticklabels([])
-    animation = FuncAnimation(fig, func=frame, frames=range(len(angles)), interval=10)
+    anim = mplanim.FuncAnimation(fig, func=frame, frames=range(len(angles)), interval=10)
     plt.show()
 
-calculate_angular_dependence(I_direction=0,H_magnitude=1)
+    f='./test.gif'
+    writergif = mplanim.PillowWriter(fps=30) 
+    anim.save(f, writer=writergif)
+
+calculate_angular_dependence(I_direction=0,H_magnitude=3)
 
 # m1=Moment('m1',Vector3d(90,90,1))
 # m2=Moment('m2',Vector3d(0,90,1))
