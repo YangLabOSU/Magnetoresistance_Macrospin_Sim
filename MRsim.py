@@ -20,32 +20,16 @@ class Vector3d:
     def __repr__(self):
         return '{},{},{}'.format(self.phi,self.theta,self.r)
 
-# Function to get the angle between two vectors
-def get_angle_between(v1: Vector3d, v2: Vector3d):
-    return np.pi/180*(v1.phi-v2.phi)
-
 # Class defining a macrospin moment
 class Moment:
     def __init__(self, name, initial_vector: Vector3d):
         self.name=name
         self.vector=initial_vector
-        
-    def calculate_energy(self, exchange_moment: Vector3d):
-        E=0
-        for term in self.hamiltonian.terms:
-            if isinstance(term, Exchange):
-                #for now only calculate relative phi angle
-                E+=term.magnitude*np.cos(get_angle_between(exchange_moment,self.vector))
-            if isinstance(term, Anisotropy):
-                E+=term.vector.r*np.cos(2*get_angle_between(term.vector,self.vector))
-            if isinstance(term, Zeeman):
-                E+=-term.vector.r*np.cos(get_angle_between(term.vector,self.vector))
-        return E
     
     def __repr__(self):
         return 'moment {} vector: {}\n'.format(self.name, self.vector)
 
-# Classes for various terms in the Hamiltonian
+# Classes for various terms in the free_energy
 class Anisotropy:
     def __init__(self,name,symmetry, vector: Vector3d):
         self.name=name
@@ -65,9 +49,15 @@ class Exchange:
         self.magnitude=magnitude # positive exchange for antiferromagnet
     def __repr__(self):
         return 'Exchange: {}, {}'.format(self.name,self.magnitude)
+class DMI:
+    def __init__(self,name, magnitude):
+        self.name=name
+        self.magnitude=magnitude
+    def __repr__(self):
+        return 'DMI: {}, {}'.format(self.name,self.magnitude)
 
-# Class defining the hamiltonian for a macrospin moment
-class Hamiltonian:
+# Class defining the free_energy for a macrospin moment
+class free_energy:
     def __init__(self):
         self.terms=[]
     def add_anisotropy(self, anisotropy: Anisotropy):
@@ -76,18 +66,20 @@ class Hamiltonian:
         self.terms.append(Zeeman)
     def add_exchange(self, exchange: Exchange):
         self.terms.append(Exchange)
+    def add_DMI(self, dmi: DMI):
+        self.terms.append(dmi)
 
     def __repr__(self):
-        rep_string='terms in Hamiltonian:\n'
+        rep_string='terms in free_energy:\n'
         for term in self.terms:
             rep_string+=term.__repr__()+'\n'
         return rep_string
 
-def minimize_energy(moment_list, hamiltonian: Hamiltonian, angle_guess=0):
+def minimize_energy(moment_list, free_energy: free_energy, angle_guess=0):
     def energy_function(x):
         E1=0
         E2=0
-        for term in hamiltonian.terms:
+        for term in free_energy.terms:
             #for now only calculate relative phi angle
             if isinstance(term, Exchange):
                 E1+=term.magnitude*np.cos(x[0]-x[1])
@@ -98,6 +90,9 @@ def minimize_energy(moment_list, hamiltonian: Hamiltonian, angle_guess=0):
             if isinstance(term, Zeeman):
                 E1+=-term.vector.r*np.cos(term.vector.phi_rad-x[0])
                 E2+=-term.vector.r*np.cos(term.vector.phi_rad-x[1])
+            if isinstance(term, DMI):
+                E1+=-term.magnitude*np.sin(x[0]-x[1])
+                E2+=-term.magnitude*np.sin(x[0]-x[1])
         # print(E1)
         # print(E2)
         return E1+E2
@@ -123,18 +118,21 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
         m1=Moment('m1',Vector3d(90,90,1))
         m2=Moment('m2',Vector3d(-90,90,1))
         Hext=Vector3d(angle,90,H_magnitude)
-        h=Hamiltonian()
+        h=free_energy()
         # h.add_anisotropy(Anisotropy('uniaxial_anisotropy',1,Vector3d(0,90,3e-2)))
         # h.add_anisotropy(Anisotropy('biaxial_anisotropy',2,Vector3d(45,90,.02)))
-        h.add_anisotropy(Anisotropy('triaxial_anisotropy',3,Vector3d(60,90,6e-5)))
+        h.add_anisotropy(Anisotropy('triaxial_anisotropy',3,Vector3d(60,90,1.6e-6)))
         h.add_anisotropy(Zeeman('external_field',Hext))
         h.add_anisotropy(Exchange('ex',1000))
+        h.add_anisotropy(DMI('dmi',2.2))
         minimize_energy([m1,m2],h,angle_guess=angle)
         m1ang.append(m1.vector.phi)
         m2ang.append(m2.vector.phi) 
     m1ang=np.asarray(m1ang)
     m2ang=np.asarray(m2ang)
     Neel_direction_rad=np.pi/180*(m1ang+m2ang)/2+np.pi/2
+    canting_angle_deg=(m1ang+m2ang)/2+90-m1ang
+    print('Canting angle average: {} deg'.format(np.mean(canting_angle_deg)))
     spin_polarization_direction_rad=I_direction*np.pi/180+np.pi/2
 
     # contributions to the MR from each sublattice magnetization
@@ -181,12 +179,12 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
     animation = FuncAnimation(fig, func=frame, frames=range(len(angles)), interval=10)
     plt.show()
 
-calculate_angular_dependence(I_direction=0,H_magnitude=2)
+calculate_angular_dependence(I_direction=0,H_magnitude=1)
 
 # m1=Moment('m1',Vector3d(90,90,1))
 # m2=Moment('m2',Vector3d(0,90,1))
 # Hext=Vector3d(0,90,10)
-# h=Hamiltonian()
+# h=free_energy()
 # h.add_anisotropy(Anisotropy('biaxial_anisotropy1',Vector3d(45,90,10)))
 # h.add_anisotropy(Anisotropy('biaxial_anisotropy2',Vector3d(135,90,10)))
 # h.add_anisotropy(Zeeman('external_field',Hext))
