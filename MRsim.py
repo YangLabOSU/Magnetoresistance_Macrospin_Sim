@@ -74,6 +74,28 @@ class Free_energy:
         for term in self.terms:
             rep_string+=term.__repr__()+'\n'
         return rep_string
+    
+def make_parameter_chart(f: Free_energy):
+    d=pd.DataFrame()
+    terms=[]
+    magnitudes=[]
+    for term in f.terms:
+        #for now only calculate relative phi angle
+        if isinstance(term, Exchange):
+            terms.append('Exchange')
+            magnitudes.append(term.magnitude)
+        if isinstance(term, Anisotropy):
+            terms.append('K$_{}$ Anisotropy at {}$^\circ$'.format(term.symmetry,term.vector.phi))
+            magnitudes.append(term.vector.r)
+        if isinstance(term, Zeeman):
+            terms.append('Zeeman')
+            magnitudes.append(term.vector.r)
+        if isinstance(term, DMI):
+            terms.append('DMI')
+            magnitudes.append(term.magnitude)
+    d['term']=terms
+    d['magnitude']=magnitudes
+    return d
 
 def minimize_energy(moment_list, free_energy: Free_energy, angle_guess=0):
     def energy_function(x):
@@ -109,7 +131,7 @@ def minimize_energy(moment_list, free_energy: Free_energy, angle_guess=0):
     moment_list[1].vector.phi=phi_opt['x'][1]*180/np.pi
     return moment_list
 
-def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude=20):
+def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude=20, savegif=''):
     angles=np.linspace(0.01,359.999,number_of_steps)
     m1ang=[]
     m2ang=[]
@@ -121,7 +143,7 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
         f=Free_energy()
         # f.add_anisotropy(Anisotropy('uniaxial_anisotropy',1,Vector3d(0,90,1e-4)))
         f.add_anisotropy(Anisotropy('biaxial_anisotropy',2,Vector3d(45,90,1e-4)))
-        # f.add_anisotropy(Anisotropy('triaxial_anisotropy',3,Vector3d(60,90,1.6e-6)))
+        # f.add_anisotropy(Anisotropy('triaxial_anisotropy',3,Vector3d(60,90,2e-5)))
         f.add_anisotropy(Zeeman('external_field',Hext))
         f.add_anisotropy(Exchange('ex',1000))
         # f.add_anisotropy(DMI('dmi',2.2))
@@ -143,10 +165,19 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
     
     # plot results
     fig = plt.figure(figsize=(6, 6))
-    ax = plt.subplot(211, polar=True)
-
-    # MR plot
     ax2 = plt.subplot(212)
+    ax3 = plt.subplot(222)
+    ax = plt.subplot(221, polar=True)
+
+    #parameter table
+    d=make_parameter_chart(f)
+    # hide axes
+    # fig.patch.set_visible(False)
+    ax3.axis('off')
+    ax3.axis('tight')
+    ax3.table(cellText=d.values,colLabels=d.columns, loc='center')
+    ax3.set_title('Simulation Parameters')
+    # MR plot
     ax2.plot(angles,m1_Rxx_contribution+m2_Rxx_contribution,
              label='R$_{xx}$')
     ax2.plot(angles,m1_Rxy_contribution+m2_Rxy_contribution,
@@ -179,11 +210,14 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
     anim = mplanim.FuncAnimation(fig, func=frame, frames=range(len(angles)), interval=10)
     plt.show()
 
-    f='./test.gif'
-    writergif = mplanim.PillowWriter(fps=30) 
-    anim.save(f, writer=writergif)
+    if savegif != '':
+        f=savegif
+        writergif = mplanim.PillowWriter(fps=30) 
+        anim.save(f, writer=writergif)
 
-calculate_angular_dependence(I_direction=0,H_magnitude=3)
+# savefile='./LFOexample.gif'
+savefile=''
+calculate_angular_dependence(I_direction=0,H_magnitude=3, savegif=savefile)
 
 # m1=Moment('m1',Vector3d(90,90,1))
 # m2=Moment('m2',Vector3d(0,90,1))
