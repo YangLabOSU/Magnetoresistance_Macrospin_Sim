@@ -141,12 +141,12 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
         m2=Moment('m2',Vector3d(-90,90,1))
         Hext=Vector3d(angle,90,H_magnitude)
         f=Free_energy()
-        # f.add_anisotropy(Anisotropy('uniaxial_anisotropy',1,Vector3d(0,90,1e-4)))
-        f.add_anisotropy(Anisotropy('biaxial_anisotropy',2,Vector3d(45,90,1e-4)))
-        # f.add_anisotropy(Anisotropy('triaxial_anisotropy',3,Vector3d(60,90,2e-5)))
+        f.add_anisotropy(Anisotropy('uniaxial_anisotropy',1,Vector3d(0,90,1e-4)))
+        # f.add_anisotropy(Anisotropy('biaxial_anisotropy',2,Vector3d(45,90,1e-4)))
+        f.add_anisotropy(Anisotropy('triaxial_anisotropy',3,Vector3d(60,90,2e-5)))
         f.add_anisotropy(Zeeman('external_field',Hext))
         f.add_anisotropy(Exchange('ex',1000))
-        # f.add_anisotropy(DMI('dmi',2.2))
+        f.add_anisotropy(DMI('dmi',2.2))
         minimize_energy([m1,m2],f,angle_guess=angle)
         m1ang.append(m1.vector.phi)
         m2ang.append(m2.vector.phi) 
@@ -215,16 +215,6 @@ def calculate_angular_dependence(number_of_steps=360, I_direction=0, H_magnitude
         writergif = mplanim.PillowWriter(fps=30) 
         anim.save(f, writer=writergif)
 
-# savefile='./LFOexample.gif'
-savefile=''
-calculate_angular_dependence(I_direction=0,H_magnitude=3, savegif=savefile)
-
-# m1=Moment('m1',Vector3d(90,90,1))
-# m2=Moment('m2',Vector3d(0,90,1))
-# Hext=Vector3d(0,90,10)
-# h=free_energy()
-# h.add_anisotropy(Anisotropy('biaxial_anisotropy1',Vector3d(45,90,10)))
-# h.add_anisotropy(Anisotropy('biaxial_anisotropy2',Vector3d(135,90,10)))
-# h.add_anisotropy(Zeeman('external_field',Hext))
-# h.add_anisotropy(Exchange('ex',100))
-# minimize_energy([m1,m2],h)
+savefile='./Fe2O3example.gif'
+# savefile=''
+calculate_angular_dependence(I_direction=0,H_magnitude=1, savegif=savefile)
