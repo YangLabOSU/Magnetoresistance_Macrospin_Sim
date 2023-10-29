@@ -162,32 +162,25 @@ class Angular_Response:
         
     
 def make_parameter_chart(flist: list):
-    dlist=[]
-    namelist=[]
+    textlist=[]
     for f in flist:
-            
-        d=pd.DataFrame()
-        terms=[]
-        magnitudes=[]
+        text='{}\n'.format(f.name)
         for term in f.terms:
             #for now only calculate relative phi angle
             if isinstance(term, Exchange):
-                terms.append('Exchange')
-                magnitudes.append(term.magnitude)
+                lt='Exchange ({}): '.format(term.name)
+                text+='\n{0:<50}{1:>8}'.format(lt,term.magnitude)
             if isinstance(term, Anisotropy):
-                terms.append('K$_{}$ Anisotropy at {}$^\circ$'.format(term.symmetry,term.vector.phi))
-                magnitudes.append(term.vector.r)
+                lt='K{} anisotropy ({}) at {} deg: '.format(term.symmetry,term.name,term.vector.phi)
+                text+='\n{0:<50}{1:>8}'.format(lt,term.vector.r)
             if isinstance(term, Zeeman):
-                terms.append('Zeeman')
-                magnitudes.append(term.vector.r)
+                lt='Zeeman ({}): '.format(term.name)
+                text+='\n{0:<50}{1:>8}'.format(lt,term.vector.r)
             if isinstance(term, DMI):
-                terms.append('DMI')
-                magnitudes.append(term.magnitude)
-        d['term']=terms
-        d['magnitude']=magnitudes
-        dlist.append(d)
-        namelist.append(f.name)
-    return dlist, namelist
+                lt='DMI ({}): '.format(term.name)
+                text+='\n{0:<50}{1:>8}'.format(lt,term.magnitude)
+        textlist.append(text)
+    return textlist
 
 def plot_angular_SMR(angular_response: Angular_Response, savegif=''):
     angular_response.calculate_resistance_contributions()
@@ -199,16 +192,14 @@ def plot_angular_SMR(angular_response: Angular_Response, savegif=''):
     ax = plt.subplot(221, polar=True)
 
     #parameter table
-    dlist,namelist=make_parameter_chart(angular_response.domain_free_energies)
+    dlist=make_parameter_chart(angular_response.domain_free_energies)
     for i in range(number_of_domains):
         d=dlist[i]
-        name=namelist[i]
         # hide axes
         # fig.patch.set_visible(False)
         ax3.axis('off')
         ax3.axis('tight')
-        ax3.table(cellText=d.values,colLabels=d.columns, loc='center')
-        ax3.set_title('{} Parameters'.format(name))
+        ax3.text(-0.06,0.05-i/30,d, fontsize=5, family='monospace')
     # MR plot
     ax2.plot(angular_response.angles,angular_response.Rxx,
              label='R$_{xx}$')
@@ -230,8 +221,6 @@ def plot_angular_SMR(angular_response: Angular_Response, savegif=''):
         xdata1+=[0,angular_response.domain_moment1_angles[j][0]*np.pi/180]
         xdata2+=[0,angular_response.domain_moment2_angles[j][0]*np.pi/180]
         
-    print(xdata1)
-    print([0,1]*number_of_domains)
     line1,=ax.plot(xdata1,[0,1]*number_of_domains,'k')
     line2,=ax.plot(xdata2,[0,1]*number_of_domains,'k')
 
